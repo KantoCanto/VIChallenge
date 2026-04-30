@@ -59,3 +59,11 @@ export type GetPokemonPageByTypesOptions = {
   offset?: number
   signal?: AbortSignal
 }
+
+export type SearchPokemonPageOptions = {
+  query: string
+  types?: string[]
+  limit?: number
+  offset?: number
+  signal?: AbortSignal
+}

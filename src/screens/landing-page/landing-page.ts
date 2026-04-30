@@ -2,15 +2,13 @@ import { LitElement, css, html } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
 import { repeat } from 'lit/directives/repeat.js'
 import type { PokemonCardData } from '../../@types/pokemonCard'
-import {
-  getPokemonPage,
-  getPokemonPageByTypes,
-  getPokemonTypes,
-} from '../../api/pokemon'
+import { getPokemonTypes, searchPokemonPage } from '../../api/pokemon'
 import './components/pokemon-card'
 import './components/pokemon-filter-sidebar'
+import './components/pokemon-search-bar'
 
 const PAGE_SIZE = 24
+const SEARCH_DEBOUNCE_MS = 220
 
 const POKEMON_TYPE_ORDER = [
   'normal',
@@ -48,6 +46,9 @@ export class LandingPage extends LitElement {
   private selectedTypes: string[] = []
 
   @state()
+  private searchQuery = ''
+
+  @state()
   private isSidebarOpen = true
 
   @state()
@@ -61,6 +62,7 @@ export class LandingPage extends LitElement {
 
   private pokemonAbortController?: AbortController
   private typesAbortController?: AbortController
+  private searchDebounceTimer?: number
 
   connectedCallback() {
     super.connectedCallback()
@@ -72,6 +74,10 @@ export class LandingPage extends LitElement {
   disconnectedCallback() {
     this.pokemonAbortController?.abort()
     this.typesAbortController?.abort()
+
+    if (this.searchDebounceTimer) {
+      window.clearTimeout(this.searchDebounceTimer)
+    }
 
     super.disconnectedCallback()
   }
@@ -116,19 +122,13 @@ export class LandingPage extends LitElement {
     this.errorMessage = ''
 
     try {
-      const page =
-        this.selectedTypes.length > 0
-          ? await getPokemonPageByTypes({
-              types: this.selectedTypes,
-              limit: PAGE_SIZE,
-              offset: 0,
-              signal: this.pokemonAbortController.signal,
-            })
-          : await getPokemonPage({
-              limit: PAGE_SIZE,
-              offset: 0,
-              signal: this.pokemonAbortController.signal,
-            })
+      const page = await searchPokemonPage({
+        query: this.searchQuery,
+        types: this.selectedTypes,
+        limit: PAGE_SIZE,
+        offset: 0,
+        signal: this.pokemonAbortController.signal,
+      })
 
       this.pokemon = page.pokemons
       this.totalPokemonCount = page.count
@@ -146,6 +146,18 @@ export class LandingPage extends LitElement {
     }
   }
 
+  private handleSearchChange(event: CustomEvent<string>) {
+    this.searchQuery = event.detail
+
+    if (this.searchDebounceTimer) {
+      window.clearTimeout(this.searchDebounceTimer)
+    }
+
+    this.searchDebounceTimer = window.setTimeout(() => {
+      void this.loadPokemon()
+    }, SEARCH_DEBOUNCE_MS)
+  }
+
   private handleTypesChange(event: CustomEvent<string[]>) {
     this.selectedTypes = event.detail
     void this.loadPokemon()
@@ -156,6 +168,9 @@ export class LandingPage extends LitElement {
   }
 
   render() {
+    const hasActiveSearch = this.searchQuery.trim().length > 0
+    const hasActiveFilters = this.selectedTypes.length > 0
+
     return html`
       <div class="page-layout">
         <pokemon-filter-sidebar
@@ -167,40 +182,46 @@ export class LandingPage extends LitElement {
         ></pokemon-filter-sidebar>
 
         <main>
-          ${this.headline
-            ? html`
-                <header class="page-header">
-                  <h1 class="headline">${this.headline}</h1>
-                </header>
-              `
-            : null}
+          <section class="hero" aria-label="Monster search and results">
+            <div class="hero-content">
+              ${this.headline
+                ? html`<h1 class="headline">${this.headline}</h1>`
+                : null}
 
-          ${this.isLoading
-            ? html`<p class="status" role="status">Loading Pokémon…</p>`
-            : null}
+              <p class="result-count" aria-live="polite">
+                ${this.isLoading
+                  ? 'Loading Pokémon…'
+                  : html`
+                      Showing ${this.pokemon.length} of ${this.totalPokemonCount}
+                      Monsters
+                      ${hasActiveSearch || hasActiveFilters
+                        ? html`<span class="muted">matching your search</span>`
+                        : null}
+                    `}
+              </p>
+            </div>
+
+            <pokemon-search-bar
+              class="search-bar"
+              .value=${this.searchQuery}
+              @search-change=${this.handleSearchChange}
+            ></pokemon-search-bar>
+          </section>  
 
           ${this.errorMessage
             ? html`<p class="status error" role="alert">${this.errorMessage}</p>`
             : null}
 
-          ${!this.isLoading && !this.errorMessage
-            ? html`
-                <p class="result-count">
-                  ${this.totalPokemonCount} monsters found
-                </p>
-              `
-            : null}
-
           ${!this.isLoading && !this.errorMessage && this.pokemon.length === 0
             ? html`
                 <section class="empty-state" aria-live="polite">
-                  <h2>No monsters found</h2>
-                  <p>Try removing one or more filters.</p>
+                  <h2>No Monsters found</h2>
+                  <p>Try changing your search or removing one or more filters.</p>
                 </section>
               `
             : null}
 
-          <section class="grid" aria-label="Monsters list">
+          <section class="grid" aria-label="Pokémon list">
             ${repeat(
               this.pokemon,
               (pokemon) => pokemon.id,
@@ -244,23 +265,41 @@ export class LandingPage extends LitElement {
       padding: clamp(24px, 4vw, 56px);
     }
 
-    .page-header {
-      margin-bottom: var(--space-5, 24px);
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+      align-items: end;
+      gap: clamp(24px, 4vw, 56px);
+      margin-bottom: clamp(32px, 5vw, 64px);
+    }
+
+    .hero-content {
+      min-width: 0;
     }
 
     .headline {
       margin: 0;
       color: var(--color-text-primary, #111827);
-      font-size: clamp(1.5rem, 3vw, 2.5rem);
-      line-height: 1.1;
-      letter-spacing: -0.04em;
+      font-size: clamp(1.75rem, 4vw, 3.25rem);
+      line-height: 1;
+      letter-spacing: -0.05em;
     }
-
     .result-count {
-      margin: 0 0 var(--space-5, 24px);
+      margin: var(--space-3, 12px) 0 0;
       color: var(--color-text-secondary, #4b5563);
       font-size: var(--font-size-sm, 0.875rem);
       font-weight: var(--font-weight-bold, 700);
+    }
+
+    .search-bar {
+      width: 100%;
+      align-self: end;
+      padding-bottom: 1rem
+    }
+
+    .muted {
+      color: var(--color-text-muted, #9ca3af);
+      font-weight: var(--font-weight-medium, 500);
     }
 
     .status {
@@ -304,13 +343,22 @@ export class LandingPage extends LitElement {
       color: var(--color-text-secondary, #4b5563);
     }
 
-    @media (max-width: 760px) {
+   @media (max-width: 760px) {
       .page-layout {
         grid-template-columns: minmax(0, 1fr);
       }
 
       main {
         padding: var(--space-4, 16px);
+      }
+
+      .hero {
+        grid-template-columns: 1fr;
+        gap: var(--space-4, 16px);
+      }
+
+      .search-bar {
+        max-width: none;
       }
     }
 

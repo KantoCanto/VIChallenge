@@ -7,10 +7,15 @@ import type {
   PokemonListResponse,
   PokemonPage,
   PokemonTypeListResponse,
+  SearchPokemonPageOptions,
 } from '../@types/pokeAPI'
 import type { PokemonCardData } from '../@types/pokemonCard'
 import { POKE_API_BASE_URL } from '../constants/constants'
 import { formatPokemonName, formatPokemonNumber } from '../lib/formatters'
+
+let allPokemonResourcesCache: NamedApiResource[] | null = null
+const typePokemonResourcesCache = new Map<string, NamedApiResource[]>()
+
 
 async function fetchData<T>(url: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(url, { signal })
@@ -172,6 +177,120 @@ export async function getPokemonPageByTypes({
     count: mergedResources.length,
     nextOffset,
     previousOffset,
+    pokemons,
+  }
+}
+
+function normalizeSearchQuery(query: string) {
+  return query.trim().toLowerCase().replace(/\s+/g, '-')
+}
+
+function matchesPokemonSearchQuery(
+  resource: NamedApiResource,
+  normalizedQuery: string,
+) {
+  if (!normalizedQuery) return true
+
+  const pokemonId = getPokemonIdFromUrl(resource.url)
+  const pokemonIdText = String(pokemonId)
+
+  return (
+    resource.name.includes(normalizedQuery) ||
+    resource.name.replaceAll('-', ' ').includes(normalizedQuery) ||
+    pokemonIdText === normalizedQuery ||
+    pokemonIdText.startsWith(normalizedQuery)
+  )
+}
+
+async function getAllPokemonResources(
+  signal?: AbortSignal,
+): Promise<NamedApiResource[]> {
+  if (allPokemonResourcesCache) {
+    return allPokemonResourcesCache
+  }
+
+  const url = `${POKE_API_BASE_URL}/pokemon?limit=100000&offset=0`
+  const response = await fetchData<PokemonListResponse>(url, signal)
+
+  allPokemonResourcesCache = removeDuplicatePokemonResources(response.results)
+
+  return allPokemonResourcesCache
+}
+
+async function getPokemonResourcesByType(
+  type: string,
+  signal?: AbortSignal,
+): Promise<NamedApiResource[]> {
+  const cachedResources = typePokemonResourcesCache.get(type)
+
+  if (cachedResources) {
+    return cachedResources
+  }
+
+  const url = `${POKE_API_BASE_URL}/type/${type}`
+  const response = await fetchData<PokeApiTypeResponse>(url, signal)
+
+  const resources = removeDuplicatePokemonResources(
+    response.pokemon.map((entry) => entry.pokemon),
+  )
+
+  typePokemonResourcesCache.set(type, resources)
+
+  return resources
+}
+
+async function getPokemonResourcesByTypes(
+  types: string[],
+  signal?: AbortSignal,
+): Promise<NamedApiResource[]> {
+  if (types.length === 0) {
+    return getAllPokemonResources(signal)
+  }
+
+  const resourcesByType = await Promise.all(
+    types.map((type) => getPokemonResourcesByType(type, signal)),
+  )
+
+  return removeDuplicatePokemonResources(resourcesByType.flat())
+}
+
+
+
+export async function searchPokemonPage({
+  query,
+  types = [],
+  limit = 24,
+  offset = 0,
+  signal,
+}: SearchPokemonPageOptions): Promise<PokemonPage> {
+  const normalizedQuery = normalizeSearchQuery(query)
+
+  if (!normalizedQuery && types.length === 0) {
+    return getPokemonPage({ limit, offset, signal })
+  }
+
+  if (!normalizedQuery && types.length > 0) {
+    return getPokemonPageByTypes({ types, limit, offset, signal })
+  }
+
+  const resources = await getPokemonResourcesByTypes(types, signal)
+
+  const matchingResources = resources.filter((resource) =>
+    matchesPokemonSearchQuery(resource, normalizedQuery),
+  )
+
+  const paginatedResources = matchingResources.slice(offset, offset + limit)
+
+  const pokemons = await getPokemonDetailsFromResources(
+    paginatedResources,
+    signal,
+  )
+
+  return {
+    count: matchingResources.length,
+    nextOffset:
+      offset + limit < matchingResources.length ? offset + limit : null,
+    previousOffset: offset - limit >= 0 ? offset - limit : null,
     pokemons,
   }
 }

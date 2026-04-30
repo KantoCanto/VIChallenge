@@ -1,5 +1,5 @@
 import { LitElement, css, html } from 'lit'
-import { customElement, property, state } from 'lit/decorators.js'
+import { customElement, property, query, state } from 'lit/decorators.js'
 import { repeat } from 'lit/directives/repeat.js'
 import type { PokemonCardData } from '../../@types/pokemonCard'
 import { getPokemonTypes, searchPokemonPage } from '../../api/pokemon'
@@ -52,34 +52,55 @@ export class LandingPage extends LitElement {
   private isSidebarOpen = true
 
   @state()
-  private isLoading = false
+  private isLoadingInitial = false
+
+  @state()
+  private isLoadingMore = false
 
   @state()
   private errorMessage = ''
 
   @state()
-  private totalPokemonCount = 0
+  private nextOffset: number | null = 0
+
+  @query('#load-more-sentinel')
+  private loadMoreSentinel?: HTMLElement
 
   private pokemonAbortController?: AbortController
   private typesAbortController?: AbortController
   private searchDebounceTimer?: number
+  private intersectionObserver?: IntersectionObserver
+  private pokemonRequestId = 0
 
   connectedCallback() {
     super.connectedCallback()
 
     void this.loadPokemonTypes()
-    void this.loadPokemon()
+    void this.loadNextPokemonPage()
+  }
+
+  firstUpdated() {
+    this.setupInfiniteScrollObserver()
   }
 
   disconnectedCallback() {
     this.pokemonAbortController?.abort()
     this.typesAbortController?.abort()
+    this.intersectionObserver?.disconnect()
 
     if (this.searchDebounceTimer) {
       window.clearTimeout(this.searchDebounceTimer)
     }
 
     super.disconnectedCallback()
+  }
+
+  private get hasMorePokemon() {
+    return this.nextOffset !== null
+  }
+
+  private get isLoading() {
+    return this.isLoadingInitial || this.isLoadingMore
   }
 
   private sortTypes(types: string[]) {
@@ -114,11 +135,58 @@ export class LandingPage extends LitElement {
     }
   }
 
-  private async loadPokemon() {
+  private setupInfiniteScrollObserver() {
+    if (!this.loadMoreSentinel) return
+
+    this.intersectionObserver = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return
+        if (!this.hasMorePokemon) return
+        if (this.isLoading) return
+
+        void this.loadNextPokemonPage()
+      },
+      {
+        root: null,
+        rootMargin: '700px 0px',
+        threshold: 0,
+      },
+    )
+
+    this.intersectionObserver.observe(this.loadMoreSentinel)
+  }
+
+  private resetAndLoadPokemon() {
+    this.pokemonRequestId += 1
+    this.pokemonAbortController?.abort()
+
+    this.pokemon = []
+    this.nextOffset = 0
+    this.errorMessage = ''
+    this.isLoadingInitial = false
+    this.isLoadingMore = false
+
+    void this.loadNextPokemonPage()
+  }
+
+  private async loadNextPokemonPage() {
+    if (this.nextOffset === null) return
+    if (this.isLoading) return
+
+    this.pokemonRequestId += 1
+    const requestId = this.pokemonRequestId
+
     this.pokemonAbortController?.abort()
     this.pokemonAbortController = new AbortController()
 
-    this.isLoading = true
+    const isInitialLoad = this.pokemon.length === 0
+
+    if (isInitialLoad) {
+      this.isLoadingInitial = true
+    } else {
+      this.isLoadingMore = true
+    }
+
     this.errorMessage = ''
 
     try {
@@ -126,41 +194,58 @@ export class LandingPage extends LitElement {
         query: this.searchQuery,
         types: this.selectedTypes,
         limit: PAGE_SIZE,
-        offset: 0,
+        offset: this.nextOffset,
         signal: this.pokemonAbortController.signal,
       })
 
-      this.pokemon = page.pokemons
-      this.totalPokemonCount = page.count
+      if (requestId !== this.pokemonRequestId) return
+
+      const existingIds = new Set(this.pokemon.map((pokemon) => pokemon.id))
+      const newPokemon = page.pokemons.filter(
+        (pokemon) => !existingIds.has(pokemon.id),
+      )
+
+      this.pokemon = [...this.pokemon, ...newPokemon]
+      this.nextOffset = page.nextOffset
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         return
       }
+
+      if (requestId !== this.pokemonRequestId) return
 
       this.errorMessage =
         error instanceof Error
           ? error.message
           : 'Something went wrong while loading Pokémon.'
     } finally {
-      this.isLoading = false
+      if (requestId !== this.pokemonRequestId) return
+
+      this.isLoadingInitial = false
+      this.isLoadingMore = false
     }
   }
 
   private handleSearchChange(event: CustomEvent<string>) {
     this.searchQuery = event.detail
 
+    this.pokemonRequestId += 1
+    this.pokemonAbortController?.abort()
+    this.isLoadingInitial = false
+    this.isLoadingMore = false
+
     if (this.searchDebounceTimer) {
       window.clearTimeout(this.searchDebounceTimer)
     }
 
     this.searchDebounceTimer = window.setTimeout(() => {
-      void this.loadPokemon()
+      this.resetAndLoadPokemon()
     }, SEARCH_DEBOUNCE_MS)
   }
 
   private handleTypesChange(event: CustomEvent<string[]>) {
     this.selectedTypes = event.detail
-    void this.loadPokemon()
+    this.resetAndLoadPokemon()
   }
 
   private handleSidebarToggle(event: CustomEvent<boolean>) {
@@ -188,17 +273,13 @@ export class LandingPage extends LitElement {
                 ? html`<h1 class="headline">${this.headline}</h1>`
                 : null}
 
-              <p class="result-count" aria-live="polite">
-                ${this.isLoading
-                  ? 'Loading Pokémon…'
-                  : html`
-                      Showing ${this.pokemon.length} of ${this.totalPokemonCount}
-                      Monsters
-                      ${hasActiveSearch || hasActiveFilters
-                        ? html`<span class="muted">matching your search</span>`
-                        : null}
-                    `}
-              </p>
+              ${hasActiveSearch || hasActiveFilters
+                ? html`
+                    <p class="active-context" aria-live="polite">
+                      Results matching your current search
+                    </p>
+                  `
+                : null}
             </div>
 
             <pokemon-search-bar
@@ -206,22 +287,26 @@ export class LandingPage extends LitElement {
               .value=${this.searchQuery}
               @search-change=${this.handleSearchChange}
             ></pokemon-search-bar>
-          </section>  
+          </section>
+
+          ${this.isLoadingInitial
+            ? html`<p class="status" role="status">Loading monsters…</p>`
+            : null}
 
           ${this.errorMessage
             ? html`<p class="status error" role="alert">${this.errorMessage}</p>`
             : null}
 
-          ${!this.isLoading && !this.errorMessage && this.pokemon.length === 0
+          ${!this.isLoadingInitial && !this.errorMessage && this.pokemon.length === 0
             ? html`
                 <section class="empty-state" aria-live="polite">
-                  <h2>No Monsters found</h2>
+                  <h2>No monsters found</h2>
                   <p>Try changing your search or removing one or more filters.</p>
                 </section>
               `
             : null}
 
-          <section class="grid" aria-label="Pokémon list">
+          <section class="grid" aria-label="Monster list">
             ${repeat(
               this.pokemon,
               (pokemon) => pokemon.id,
@@ -230,6 +315,28 @@ export class LandingPage extends LitElement {
               `,
             )}
           </section>
+
+          <div
+            id="load-more-sentinel"
+            class="load-more-sentinel"
+            aria-hidden="true"
+          ></div>
+
+          ${this.isLoadingMore
+            ? html`
+                <p class="loading-more" role="status">
+                  Loading more monsters…
+                </p>
+              `
+            : null}
+
+          ${!this.hasMorePokemon && this.pokemon.length > 0
+            ? html`
+                <p class="end-message">
+                  You have reached the end.
+                </p>
+              `
+            : null}
         </main>
       </div>
     `
@@ -250,12 +357,15 @@ export class LandingPage extends LitElement {
     }
 
     .page-layout {
-      display: grid;
-      grid-template-columns: auto minmax(0, 1fr);
-      width: 100%;
-      min-height: 100vh;
-      background: var(--color-page-bg, #f9fafb);
-    }
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  width: 100%;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 20% 0%, rgb(254 215 170 / 55%), transparent 360px),
+    radial-gradient(circle at 90% 12%, rgb(191 219 254 / 50%), transparent 420px),
+    var(--color-page-bg, #fff7ed);
+}
 
     main {
       min-width: 0;
@@ -284,7 +394,8 @@ export class LandingPage extends LitElement {
       line-height: 1;
       letter-spacing: -0.05em;
     }
-    .result-count {
+
+    .active-context {
       margin: var(--space-3, 12px) 0 0;
       color: var(--color-text-secondary, #4b5563);
       font-size: var(--font-size-sm, 0.875rem);
@@ -294,12 +405,6 @@ export class LandingPage extends LitElement {
     .search-bar {
       width: 100%;
       align-self: end;
-      padding-bottom: 1rem
-    }
-
-    .muted {
-      color: var(--color-text-muted, #9ca3af);
-      font-weight: var(--font-weight-medium, 500);
     }
 
     .status {
@@ -324,6 +429,20 @@ export class LandingPage extends LitElement {
       min-width: 0;
     }
 
+    .load-more-sentinel {
+      width: 100%;
+      height: 1px;
+    }
+
+    .loading-more,
+    .end-message {
+      margin: var(--space-6, 32px) 0 0;
+      color: var(--color-text-secondary, #4b5563);
+      font-size: var(--font-size-sm, 0.875rem);
+      font-weight: var(--font-weight-bold, 700);
+      text-align: center;
+    }
+
     .empty-state {
       margin-bottom: var(--space-5, 24px);
       padding: var(--space-5, 24px);
@@ -343,7 +462,7 @@ export class LandingPage extends LitElement {
       color: var(--color-text-secondary, #4b5563);
     }
 
-   @media (max-width: 760px) {
+    @media (max-width: 760px) {
       .page-layout {
         grid-template-columns: minmax(0, 1fr);
       }

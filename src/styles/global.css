@@ -13,9 +13,13 @@ body {
 
 body {
   min-height: 100vh;
-  font-family: var(--font-family-sans, system-ui, sans-serif);
-  color: var(--color-text-primary, #111827);
-  background: var(--color-page-bg, #f9fafb);
+  font-family: var(--font-family-sans);
+  color: var(--color-text-primary);
+  background:
+    radial-gradient(circle at top left, #fef3c7 0, transparent 340px),
+    radial-gradient(circle at top right, #dbeafe 0, transparent 360px),
+    var(--color-page-bg);
+  overflow-x: clip;
 }
 
 landing-page {

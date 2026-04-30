@@ -29,7 +29,17 @@ export class PokemonFilterSidebar extends LitElement {
           aria-controls="pokemon-filter-content"
           @click=${this.handleToggle}
         >
-          <span aria-hidden="true">${this.open ? '←' : '→'}</span>
+          <svg
+            class=${classMap({ icon: true, flipped: this.open })}
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path
+              d="M13.47 5.47a.75.75 0 0 1 1.06 0l6 6a.75.75 0 0 1 0 1.06l-6 6a.75.75 0 1 1-1.06-1.06l4.72-4.72H4a.75.75 0 0 1 0-1.5h14.19l-4.72-4.72a.75.75 0 0 1 0-1.06Z"
+              fill="currentColor"
+            ></path>
+          </svg>
           <span class="toggle-label">
             ${this.open ? 'Collapse filters' : 'Expand filters'}
           </span>
@@ -150,8 +160,9 @@ export class PokemonFilterSidebar extends LitElement {
       width: 280px;
       min-height: 100vh;
       padding: var(--space-4, 16px);
-      border-right: 1px solid var(--color-border, #e5e7eb);
-      background: var(--color-surface, #ffffff);
+      border-right: 1px solid var(--color-border, #fed7aa);
+      background: rgb(255 255 255 / 72%);
+      backdrop-filter: blur(18px);
       overflow: hidden;
     }
 
@@ -180,6 +191,16 @@ export class PokemonFilterSidebar extends LitElement {
     .tag:focus-visible {
       outline: 2px solid var(--color-text-primary, #111827);
       outline-offset: 3px;
+    }
+
+    .icon {
+      width: 1em;
+      height: 1em;
+      flex: 0 0 auto;
+    }
+
+    .icon.flipped {
+      transform: rotate(180deg);
     }
 
     .collapsed .toggle-label,

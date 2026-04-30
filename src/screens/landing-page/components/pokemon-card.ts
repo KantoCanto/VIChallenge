@@ -101,38 +101,36 @@ export class PokemonCard extends LitElement {
   :host {
     display: block;
     min-width: 0;
-    content-visibility: auto;
     contain-intrinsic-size: 340px;
   }
 
- .card-link {
-  display: block;
-  min-height: 100%;
-  color: inherit;
-  text-decoration: none;
-  border-radius: var(--radius-lg, 20px);
-}
+  .card-link {
+    display: block;
+    min-height: 100%;
+    color: inherit;
+    text-decoration: none;
+    border-radius: var(--radius-lg, 24px);
+    box-shadow: var(--shadow-card, 0 12px 32px rgb(124 74 45 / 10%));
+    transition:
+      box-shadow 160ms ease,
+      transform 160ms ease;
+  }
+
+  .card-link:hover {
+    box-shadow: var(--shadow-card-hover, 0 18px 44px rgb(124 74 45 / 16%));
+  }
 
   .card-link:hover .card {
-    border-color: color-mix(
-      in srgb,
-      var(--color-border, #e5e7eb),
-      var(--color-text-primary, #111827) 18%
-    );
-    box-shadow: 0 18px 44px rgb(15 23 42 / 14%);
+    border-color: var(--color-border-strong, #fdba74);
   }
 
   .card-link:hover .image {
     transform: scale(1.04);
   }
-
   .card-link:focus-visible {
     outline: 3px solid var(--color-text-primary, #111827);
     outline-offset: 4px;
   }
-
-
-
 
   .card {
     position: relative;
@@ -140,14 +138,15 @@ export class PokemonCard extends LitElement {
     grid-template-rows: auto minmax(190px, 1fr) auto;
     min-height: 340px;
     padding: var(--space-4, 16px);
-    border: none;
-    border-radius: var(--radius-lg, 20px);
-    background: var(--color-surface, #ffffff);
-    box-shadow: var(--shadow-card, 0 8px 24px rgb(15 23 42 / 8%));
+    border: 1px solid var(--color-border, #fed7aa);
+    border-radius: inherit;
+    background: linear-gradient(
+      180deg,
+      #ffffff 0%,
+      var(--color-surface-muted, #fff7ed) 100%
+    );
     overflow: hidden;
-    transition:
-      box-shadow 160ms ease,
-      border-color 160ms ease;
+    transition: border-color 160ms ease;
   }
 
   .number {

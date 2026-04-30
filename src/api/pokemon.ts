@@ -182,26 +182,24 @@ export async function getPokemonPageByTypes({
 }
 
 function normalizeSearchQuery(query: string) {
-  return query.trim().toLowerCase().replace(/\s+/g, '-')
+  return query.trim().toLowerCase().replace(/\s+/g, ' ')
 }
 
 function matchesPokemonSearchQuery(
   resource: NamedApiResource,
   normalizedQuery: string,
 ) {
-  if (!normalizedQuery) return true
-
   const pokemonId = getPokemonIdFromUrl(resource.url)
   const pokemonIdText = String(pokemonId)
+  const readableName = resource.name.replaceAll('-', ' ')
 
   return (
-    resource.name.includes(normalizedQuery) ||
-    resource.name.replaceAll('-', ' ').includes(normalizedQuery) ||
+    resource.name.startsWith(normalizedQuery) ||
+    readableName.startsWith(normalizedQuery) ||
     pokemonIdText === normalizedQuery ||
     pokemonIdText.startsWith(normalizedQuery)
   )
 }
-
 async function getAllPokemonResources(
   signal?: AbortSignal,
 ): Promise<NamedApiResource[]> {

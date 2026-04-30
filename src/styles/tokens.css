@@ -1,4 +1,3 @@
-
 :root {
   /* Fonts */
   --font-family-sans:
@@ -29,23 +28,35 @@
   --space-6: 32px;
 
   /* Radius */
-  --radius-sm: 6px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 24px;
   --radius-pill: 999px;
 
   /* App colors */
-  --color-page-bg: #f9fafb;
-  --color-surface: #ffffff;
-  --color-surface-muted: #f3f4f6;
-  --color-border: #e5e7eb;
+  --color-page-bg: #fff7ed;
+  --color-page-bg-soft: #fef3c7;
 
-  --color-text-primary: #111827;
-  --color-text-secondary: #4b5563;
-  --color-text-muted: #9ca3af;
+  --color-surface: #ffffff;
+  --color-surface-muted: #fff7ed;
+  --color-surface-raised: #ffffff;
+
+  --color-border: #fed7aa;
+  --color-border-strong: #fdba74;
+
+  --color-text-primary: #2f1b12;
+  --color-text-secondary: #7c4a2d;
+  --color-text-muted: #a16207;
+
+  --color-accent: #f97316;
+  --color-accent-soft: #ffedd5;
+
+  --color-danger: #b91c1c;
 
   /* Shadows */
-  --shadow-card: 0 8px 24px rgb(15 23 42 / 8%);
+  --shadow-card: 0 12px 32px rgb(124 74 45 / 10%);
+  --shadow-card-hover: 0 18px 44px rgb(124 74 45 / 16%);
+  --shadow-floating: 0 16px 48px rgb(124 74 45 / 12%);
 
   /* Pokémon type colors */
   --pokemon-type-normal-bg: #a8a77a;
@@ -104,19 +115,4 @@
 
   --pokemon-type-fallback-bg: #e5e7eb;
   --pokemon-type-fallback-text: #111827;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-page-bg: #030712;
-    --color-surface: #111827;
-    --color-surface-muted: #1f2937;
-    --color-border: #374151;
-
-    --color-text-primary: #f9fafb;
-    --color-text-secondary: #d1d5db;
-    --color-text-muted: #6b7280;
-
-    --shadow-card: 0 8px 24px rgb(0 0 0 / 30%);
-  }
 }

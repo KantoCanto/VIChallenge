@@ -1,0 +1,25 @@
+@import './tokens.css';
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  font-family: var(--font-family-sans, system-ui, sans-serif);
+  color: var(--color-text-primary, #111827);
+  background: var(--color-page-bg, #f9fafb);
+}
+
+landing-page {
+  display: block;
+  width: 100%;
+  min-height: 100vh;
+}

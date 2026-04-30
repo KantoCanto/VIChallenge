@@ -1,0 +1,122 @@
+
+:root {
+  /* Fonts */
+  --font-family-sans:
+    Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Font sizes */
+  --font-size-xxs: 0.6rem;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 2rem;
+
+  /* Font weights */
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+  --font-weight-extra-bold: 800;
+
+  /* Layout */
+  --page-max-width: 1200px;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  /* App colors */
+  --color-page-bg: #f9fafb;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f3f4f6;
+  --color-border: #e5e7eb;
+
+  --color-text-primary: #111827;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #9ca3af;
+
+  /* Shadows */
+  --shadow-card: 0 8px 24px rgb(15 23 42 / 8%);
+
+  /* Pokémon type colors */
+  --pokemon-type-normal-bg: #a8a77a;
+  --pokemon-type-normal-text: #111827;
+
+  --pokemon-type-fire-bg: #ee8130;
+  --pokemon-type-fire-text: #111827;
+
+  --pokemon-type-water-bg: #6390f0;
+  --pokemon-type-water-text: #ffffff;
+
+  --pokemon-type-electric-bg: #f7d02c;
+  --pokemon-type-electric-text: #111827;
+
+  --pokemon-type-grass-bg: #7ac74c;
+  --pokemon-type-grass-text: #111827;
+
+  --pokemon-type-ice-bg: #96d9d6;
+  --pokemon-type-ice-text: #111827;
+
+  --pokemon-type-fighting-bg: #c22e28;
+  --pokemon-type-fighting-text: #ffffff;
+
+  --pokemon-type-poison-bg: #a33ea1;
+  --pokemon-type-poison-text: #ffffff;
+
+  --pokemon-type-ground-bg: #e2bf65;
+  --pokemon-type-ground-text: #111827;
+
+  --pokemon-type-flying-bg: #a98ff3;
+  --pokemon-type-flying-text: #111827;
+
+  --pokemon-type-psychic-bg: #f95587;
+  --pokemon-type-psychic-text: #111827;
+
+  --pokemon-type-bug-bg: #a6b91a;
+  --pokemon-type-bug-text: #111827;
+
+  --pokemon-type-rock-bg: #b6a136;
+  --pokemon-type-rock-text: #111827;
+
+  --pokemon-type-ghost-bg: #735797;
+  --pokemon-type-ghost-text: #ffffff;
+
+  --pokemon-type-dragon-bg: #6f35fc;
+  --pokemon-type-dragon-text: #ffffff;
+
+  --pokemon-type-dark-bg: #705746;
+  --pokemon-type-dark-text: #ffffff;
+
+  --pokemon-type-steel-bg: #b7b7ce;
+  --pokemon-type-steel-text: #111827;
+
+  --pokemon-type-fairy-bg: #d685ad;
+  --pokemon-type-fairy-text: #111827;
+
+  --pokemon-type-fallback-bg: #e5e7eb;
+  --pokemon-type-fallback-text: #111827;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-page-bg: #030712;
+    --color-surface: #111827;
+    --color-surface-muted: #1f2937;
+    --color-border: #374151;
+
+    --color-text-primary: #f9fafb;
+    --color-text-secondary: #d1d5db;
+    --color-text-muted: #6b7280;
+
+    --shadow-card: 0 8px 24px rgb(0 0 0 / 30%);
+  }
+}

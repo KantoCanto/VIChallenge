@@ -1,44 +1,20 @@
-// src/components/pokemon-card.ts
-
 import { LitElement, css, html, nothing } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { styleMap } from 'lit/directives/style-map.js'
 import type { PokemonCardData } from '../../../@types/pokemonCard'
-type PokemonTypeTheme = {
-  background: string
-  text: string
-}
-
-const TYPE_THEMES: Record<string, PokemonTypeTheme> = {
-  normal: { background: '#A8A77A', text: '#111827' },
-  fire: { background: '#EE8130', text: '#111827' },
-  water: { background: '#6390F0', text: '#ffffff' },
-  electric: { background: '#F7D02C', text: '#111827' },
-  grass: { background: '#7AC74C', text: '#111827' },
-  ice: { background: '#96D9D6', text: '#111827' },
-  fighting: { background: '#C22E28', text: '#ffffff' },
-  poison: { background: '#A33EA1', text: '#ffffff' },
-  ground: { background: '#E2BF65', text: '#111827' },
-  flying: { background: '#A98FF3', text: '#111827' },
-  psychic: { background: '#F95587', text: '#111827' },
-  bug: { background: '#A6B91A', text: '#111827' },
-  rock: { background: '#B6A136', text: '#111827' },
-  ghost: { background: '#735797', text: '#ffffff' },
-  dragon: { background: '#6F35FC', text: '#ffffff' },
-  dark: { background: '#705746', text: '#ffffff' },
-  steel: { background: '#B7B7CE', text: '#111827' },
-  fairy: { background: '#D685AD', text: '#111827' },
-}
-
-const FALLBACK_TYPE_THEME: PokemonTypeTheme = {
-  background: '#E5E7EB',
-  text: '#111827',
-}
+import {
+  FALLBACK_POKEMON_TYPE_THEME,
+  POKEMON_TYPE_THEMES,
+} from '../../../theme/pokemon-type-theme'
 
 @customElement('pokemon-card')
 export class PokemonCard extends LitElement {
   @property({ attribute: false })
   pokemon?: PokemonCardData
+
+  private getMonsterHref(id: number) {
+    return `/monsters/${id}`
+  }
 
   render() {
     if (!this.pokemon) {
@@ -48,9 +24,14 @@ export class PokemonCard extends LitElement {
     const { id, number, name, imageUrl, types } = this.pokemon
     const headingId = `pokemon-card-title-${id}`
 
-    return html`
-      <article class="card" aria-labelledby=${headingId}>
-        <p class="number" aria-label=${`Pokémon number ${number}`}>
+   return html`
+    <a
+      class="card-link"
+      href=${this.getMonsterHref(id)}
+      aria-labelledby=${headingId}
+    >
+      <article class="card">
+        <p class="number" aria-label=${`Monster number ${number}`}>
           ${number}
         </p>
 
@@ -66,7 +47,11 @@ export class PokemonCard extends LitElement {
                 />
               `
             : html`
-                <div class="image fallback-image" role="img" aria-label=${`${name} artwork unavailable`}>
+                <div
+                  class="image fallback-image"
+                  role="img"
+                  aria-label=${`${name} artwork unavailable`}
+                >
                   ?
                 </div>
               `}
@@ -80,13 +65,14 @@ export class PokemonCard extends LitElement {
           </ul>
         </footer>
       </article>
-    `
+    </a>
+  `
   }
 
   private renderTypeBadge(type: string) {
     const normalizedType = type.toLowerCase()
-    const theme = TYPE_THEMES[normalizedType] ?? FALLBACK_TYPE_THEME
-    const label = this.formatTypeName(type)
+    const theme =
+      POKEMON_TYPE_THEMES[normalizedType] ?? FALLBACK_POKEMON_TYPE_THEME
 
     return html`
       <li
@@ -96,7 +82,7 @@ export class PokemonCard extends LitElement {
           '--type-text': theme.text,
         })}
       >
-        ${label}
+        ${this.formatTypeName(type)}
       </li>
     `
   }
@@ -106,119 +92,175 @@ export class PokemonCard extends LitElement {
   }
 
   static styles = css`
-    :host {
-      display: block;
-      content-visibility: auto;
-      contain-intrinsic-size: 260px;
-    }
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
 
+  :host {
+    display: block;
+    min-width: 0;
+    content-visibility: auto;
+    contain-intrinsic-size: 340px;
+  }
+
+ .card-link {
+  display: block;
+  min-height: 100%;
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--radius-lg, 20px);
+}
+
+  .card-link:hover .card {
+    border-color: color-mix(
+      in srgb,
+      var(--color-border, #e5e7eb),
+      var(--color-text-primary, #111827) 18%
+    );
+    box-shadow: 0 18px 44px rgb(15 23 42 / 14%);
+  }
+
+  .card-link:hover .image {
+    transform: scale(1.04);
+  }
+
+  .card-link:focus-visible {
+    outline: 3px solid var(--color-text-primary, #111827);
+    outline-offset: 4px;
+  }
+
+
+
+
+  .card {
+    position: relative;
+    display: grid;
+    grid-template-rows: auto minmax(190px, 1fr) auto;
+    min-height: 340px;
+    padding: var(--space-4, 16px);
+    border: none;
+    border-radius: var(--radius-lg, 20px);
+    background: var(--color-surface, #ffffff);
+    box-shadow: var(--shadow-card, 0 8px 24px rgb(15 23 42 / 8%));
+    overflow: hidden;
+    transition:
+      box-shadow 160ms ease,
+      border-color 160ms ease;
+  }
+
+  .number {
+    justify-self: end;
+    z-index: 1;
+    margin: 0;
+    padding: var(--space-1, 4px) var(--space-2, 8px);
+    border-radius: var(--radius-pill, 999px);
+    background: var(--color-surface-muted, #f3f4f6);
+    color: var(--color-text-secondary, #4b5563);
+    font-size: var(--font-size-md, 0.75rem);
+    font-weight: var(--font-weight-bold, 700);
+    line-height: 1;
+    letter-spacing: 0.03em;
+  }
+
+  .image-wrapper {
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    min-height: 190px;
+    padding: var(--space-3, 12px) 0;
+  }
+
+  .image {
+    display: block;
+    width: min(100%, 210px);
+    height: 210px;
+    object-fit: contain;
+    transition: transform 160ms ease;
+  }
+
+  .fallback-image {
+    display: grid;
+    place-items: center;
+    width: 160px;
+    height: 160px;
+    border-radius: var(--radius-pill, 999px);
+    background: var(--color-surface-muted, #f3f4f6);
+    color: var(--color-text-muted, #9ca3af);
+    font-size: 3rem;
+    font-weight: var(--font-weight-bold, 700);
+  }
+
+  .footer {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: var(--space-3, 12px);
+    min-width: 0;
+  }
+
+  .name {
+    min-width: 0;
+    margin: 0;
+    padding-left: var(--space-4, 4px);
+    color: var(--color-text-primary, #111827);
+    font-size: var(--font-size-md, 1rem);
+    font-weight: var(--font-weight-extra-bold, 800);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .types {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: var(--space-2, 8px);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .type {
+    padding: var(--space-1, 4px) var(--space-2, 8px);
+    border-radius: var(--radius-pill, 999px);
+    background: var(--type-bg);
+    color: var(--type-text);
+    font-size: var(--font-size-xxs, 0.6rem);
+    font-weight: var(--font-weight-extra-bold, 800);
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  @media (max-width: 520px) {
     .card {
-      position: relative;
-      display: grid;
-      grid-template-rows: auto 1fr auto;
-      min-height: 260px;
-      padding: 16px;
-      border: 1px solid #e5e7eb;
-      border-radius: 20px;
-      background: #ffffff;
-      box-shadow: 0 8px 24px rgb(15 23 42 / 8%);
-      overflow: hidden;
-    }
-
-    .number {
-      justify-self: start;
-      margin: 0;
-      padding: 4px 8px;
-      border-radius: 999px;
-      background: #f3f4f6;
-      color: #4b5563;
-      font-size: 0.8rem;
-      font-weight: 700;
-      line-height: 1;
-      letter-spacing: 0.03em;
+      grid-template-rows: auto minmax(170px, 1fr) auto;
+      min-height: 310px;
     }
 
     .image-wrapper {
-      display: grid;
-      place-items: center;
-      min-height: 150px;
+      min-height: 170px;
     }
 
     .image {
-      width: min(100%, 150px);
-      height: 150px;
-      object-fit: contain;
+      width: min(100%, 180px);
+      height: 180px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card,
+    .image {
+      transition: none;
     }
 
-    .fallback-image {
-      display: grid;
-      place-items: center;
-      border-radius: 999px;
-      background: #f3f4f6;
-      color: #9ca3af;
-      font-size: 3rem;
-      font-weight: 700;
+    .card-link:hover .image {
+      transform: none;
     }
-
-    .footer {
-      display: flex;
-      align-items: end;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .name {
-      margin: 0;
-      color: #111827;
-      font-size: 1rem;
-      font-weight: 800;
-      line-height: 1.2;
-    }
-
-    .types {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-      gap: 6px;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    .type {
-      padding: 4px 8px;
-      border-radius: 999px;
-      background: var(--type-bg);
-      color: var(--type-text);
-      font-size: 0.7rem;
-      font-weight: 800;
-      line-height: 1;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .card {
-        border-color: #374151;
-        background: #111827;
-        box-shadow: 0 8px 24px rgb(0 0 0 / 30%);
-      }
-
-      .number {
-        background: #1f2937;
-        color: #d1d5db;
-      }
-
-      .name {
-        color: #f9fafb;
-      }
-
-      .fallback-image {
-        background: #1f2937;
-        color: #6b7280;
-      }
-    }
-  `
+  }
+`
 }
 
 declare global {

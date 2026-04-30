@@ -24,6 +24,7 @@ export class PokemonFilterSidebar extends LitElement {
         <button
           class="toggle-button"
           type="button"
+          aria-label=${this.open ? 'Collapse filters' : 'Expand filters'}
           aria-expanded=${this.open}
           aria-controls="pokemon-filter-content"
           @click=${this.handleToggle}

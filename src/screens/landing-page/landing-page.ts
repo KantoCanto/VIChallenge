@@ -183,16 +183,24 @@ export class LandingPage extends LitElement {
             ? html`<p class="status error" role="alert">${this.errorMessage}</p>`
             : null}
 
+          ${!this.isLoading && !this.errorMessage
+            ? html`
+                <p class="result-count">
+                  ${this.totalPokemonCount} monsters found
+                </p>
+              `
+            : null}
+
           ${!this.isLoading && !this.errorMessage && this.pokemon.length === 0
             ? html`
                 <section class="empty-state" aria-live="polite">
-                  <h2>No Pokémon found</h2>
+                  <h2>No monsters found</h2>
                   <p>Try removing one or more filters.</p>
                 </section>
               `
             : null}
 
-          <section class="grid" aria-label="Pokémon list">
+          <section class="grid" aria-label="Monsters list">
             ${repeat(
               this.pokemon,
               (pokemon) => pokemon.id,
